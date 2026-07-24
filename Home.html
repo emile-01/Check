@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>MENYA | Social Feed Hub</title>
+    <meta name="theme-color" content="#0F4C5C">
+    
+    <!-- Typography: Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <style>
+        /* CSS RESET & VARIABLES */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #D4A017;
+            --secondary: #0F4C5C;
+            --bg: #FFFFFF;
+            --card-bg: #FFFFFF;
+            --text-main: #111827;
+            --text-light: #6B7280;
+            --border: #E5E7EB;
+            --input-bg: #F9FAFB;
+            
+            --font-title: 15px;
+            --font-body: 14px;
+            --font-meta: 12px;
+
+            --space-1: 8px;
+            --space-2: 16px;
+            --space-3: 24px;
+            --space-4: 32px;
+        }
+
+        html, body {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.5;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* AUTH GATEWAY SCREEN */
+        #auth-gateway {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: var(--space-2);
+        }
+
+        .auth-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: var(--space-4);
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            text-align: center;
+        }
+
+        .auth-logo-box {
+            width: 48px;
+            height: 48px;
+            background: var(--secondary);
+            border-radius: 50%;
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 24px;
+            margin: 0 auto;
+        }
+
+        .auth-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--secondary);
+            letter-spacing: -0.5px;
+        }
+
+        .auth-subtitle {
+            font-size: var(--font-body);
+            color: var(--text-light);
+            margin-bottom: var(--space-1);
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            text-align: left;
+        }
+
+        .auth-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .auth-label {
+            font-size: var(--font-meta);
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px var(--space-2);
+            font-family: 'Inter', sans-serif;
+            font-size: var(--font-body);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            outline: none;
+            background: var(--input-bg);
+            transition: border-color 0.15s ease;
+        }
+
+        .auth-input:focus {
+            border-color: var(--secondary);
+            background: #FFFFFF;
+        }
+
+        .auth-submit-btn {
+            background: var(--secondary);
+            color: #FFFFFF;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: var(--font-body);
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.15s ease;
+            margin-top: 4px;
+        }
+
+        .auth-submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .auth-switch-text {
+            font-size: var(--font-meta);
+            color: var(--text-light);
+            text-align: center;
+            margin-top: var(--space-1);
+        }
+
+        .auth-switch-link {
+            color: var(--secondary);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .app-layout {
+            width: 100%;
+            max-width: 1200px;
+            min-height: 100vh;
+            display: none; /* Hidden until authenticated */
+            grid-template-columns: 1fr;
+            padding: 0 var(--space-2);
+            overflow-x: hidden;
+        }
+
+        @media (min-width: 992px) {
+            .app-layout {
+                grid-template-columns: 240px minmax(0, 1fr) 310px;
+                gap: var(--space-4);
+                padding: 0 var(--space-3);
+                height: 100vh;
+                overflow: hidden;
+            }
+        }
+
+        /* HEADER / MOBILE TOP BAR */
+        header {
+            padding-top: var(--space-2);
+            padding-bottom: var(--space-1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            background: var(--bg);
+            z-index: 100;
+            width: 100%;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .logo-box {
+            width: 28px;
+            height: 28px;
+            background: var(--secondary);
+            border-radius: 6px;
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 15px;
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--secondary);
+            letter-spacing: 0.5px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-main);
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: background 0.15s ease;
+        }
+
+        .icon-btn:active {
+            background: var(--border);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .notif-wrapper {
+            position: relative;
+        }
+
+        .badge {
+            position: absolute;
+            top: -4px;
+            right: -6px;
+            background: #EF4444;
+            color: #FFFFFF;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 10px;
+            border: 2px solid var(--bg);
+            line-height: 1;
+        }
+
+        .avatar-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--secondary);
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 13px;
+            border: 1.5px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .avatar-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* LEFT NAVIGATION */
+        .left-sidebar {
+            display: none;
+        }
+
+        @media (min-width: 992px) {
+            .left-sidebar {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-3);
+                padding-top: var(--space-2);
+                height: 100vh;
+                border-right: 1px solid var(--border);
+                padding-right: var(--space-2);
+                overflow-y: auto;
+            }
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: 10px var(--space-2);
+            font-size: var(--font-body);
+            font-weight: 600;
+            color: var(--text-main);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background 0.15s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: var(--input-bg);
+            color: var(--secondary);
+        }
+
+        /* DROPDOWN PANELS */
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            width: 180px;
+            display: none;
+            flex-direction: column;
+            padding: var(--space-1) 0;
+            z-index: 200;
+        }
+
+        .dropdown-menu.active {
+            display: flex;
+        }
+
+        #navDropdown { left: 0; }
+        #avatarDropdown { right: 0; width: 220px; }
+
+        .dropdown-item {
+            padding: var(--space-1) var(--space-2);
+            font-size: var(--font-body);
+            color: var(--text-main);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .dropdown-item:hover, .dropdown-item:active {
+            background: var(--input-bg);
+        }
+
+        .user-profile-summary {
+            padding: var(--space-1) var(--space-2);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: var(--space-1);
+        }
+
+        .profile-name {
+            font-size: var(--font-title);
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .profile-stats {
+            font-size: 11px;
+            color: var(--text-light);
+            margin-top: 2px;
+        }
+
+        /* SEARCH BAR */
+        .search-container {
+            margin-top: var(--space-1);
+            margin-bottom: var(--space-2);
+            width: 100%;
+        }
+
+        .search-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: var(--space-2);
+            color: var(--text-light);
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: var(--space-1) var(--space-2) var(--space-1) 38px;
+            font-family: 'Inter', sans-serif;
+            font-size: var(--font-body);
+            color: var(--text-main);
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            outline: none;
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--secondary);
+            background: var(--bg);
+        }
+
+        /* MAIN CONTENT & FEED */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            min-width: 0;
+            overflow-x: hidden;
+        }
+
+        @media (min-width: 992px) {
+            .main-content {
+                height: 100vh;
+                overflow-y: auto;
+                padding-right: 4px;
+            }
+            .main-content::-webkit-scrollbar {
+                width: 4px;
+            }
+            .main-content::-webkit-scrollbar-thumb {
+                background: var(--border);
+                border-radius: 4px;
+            }
+        }
+
+        .feed {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            width: 100%;
+            min-width: 0;
+            padding-bottom: var(--space-4);
+        }
+
+        /* FULL SCREEN INITIAL LOADER */
+        #page-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .circular-progress {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--secondary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loader-text {
+            margin-top: 12px;
+            font-size: var(--font-body);
+            font-weight: 600;
+            color: var(--secondary);
+            letter-spacing: -0.5px;
+        }
+
+        /* SKELETON LOADER STYLES */
+        .skeleton-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: var(--space-2);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+            border: 1px solid var(--border);
+            animation: pulse 1.5s infinite ease-in-out;
+            width: 100%;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        .skeleton-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .skeleton-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        .skeleton-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .skeleton-line {
+            height: 10px;
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .skeleton-line.short {
+            width: 40%;
+        }
+
+        .skeleton-line.long {
+            width: 80%;
+        }
+
+        .skeleton-media {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: var(--border);
+            border-radius: 6px;
+            margin-top: 4px;
+        }
+
+        /* POST CARD MATCHING EXPLORE.HTML */
+        .post-card {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+            padding-bottom: var(--space-2);
+            border-bottom: 1px solid var(--border);
+            width: 100%;
+            max-width: 100%;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            background: var(--card-bg);
+            position: relative;
+        }
+
+        .post-title {
+            font-size: var(--font-title);
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.35;
+            cursor: pointer;
+        }
+
+        .post-subtitle {
+            font-size: var(--font-body);
+            color: var(--text-light);
+            line-height: 1.45;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+
+        .post-subtitle.collapsed {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .read-more-btn {
+            background: none;
+            border: none;
+            color: var(--secondary);
+            font-size: var(--font-meta);
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0;
+            margin-top: 2px;
+            width: fit-content;
+        }
+
+        .post-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: var(--font-meta);
+            color: var(--text-light);
+            margin-top: 2px;
+            width: 100%;
+        }
+
+        .meta-author-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .meta-avatar {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--secondary);
+            color: #FFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .meta-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .meta-author {
+            font-weight: 600;
+            color: var(--text-main);
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .meta-dot {
+            font-size: 8px;
+            flex-shrink: 0;
+        }
+
+        .post-interactions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: var(--space-1);
+            padding-top: var(--space-1);
+            position: relative;
+            width: 100%;
+        }
+
+        .action-group {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: var(--font-meta);
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: color 0.15s ease;
+        }
+
+        .action-btn:hover, .action-btn:active {
+            color: var(--text-main);
+        }
+
+        .msr-badge {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--secondary);
+            background: rgba(15, 76, 92, 0.08);
+            border: 1px solid rgba(15, 76, 92, 0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            letter-spacing: 0.2px;
+            flex-shrink: 0;
+        }
+
+        .msr-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        /* MEDIA DISPLAY (IMAGES & COLOR ACCENTS) */
+        .post-color-banner {
+            padding: var(--space-3);
+            border-radius: 8px;
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 16px;
+            text-align: center;
+            margin: var(--space-1) 0;
+            word-break: break-word;
+            width: 100%;
+        }
+
+        .post-media-container {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            background: var(--input-bg);
+            border-radius: 8px;
+            margin-top: var(--space-1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .post-media-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        /* POLLS STYLING */
+        .poll-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: var(--space-1);
+            width: 100%;
+        }
+
+        .poll-option-row {
+            position: relative;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            padding: 10px var(--space-2);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            overflow: hidden;
+            transition: background 0.15s ease;
+            width: 100%;
+        }
+
+        .poll-option-row:hover {
+            background: var(--border);
+        }
+
+        .poll-progress-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: rgba(15, 76, 92, 0.12);
+            z-index: 1;
+            transition: width 0.3s ease;
+        }
+
+        .poll-option-text, .poll-option-percentage {
+            position: relative;
+            z-index: 2;
+        }
+
+        .poll-option-text {
+            font-size: var(--font-body);
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .poll-option-percentage {
+            font-size: var(--font-meta);
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        /* SHARE CARD */
+        .share-card {
+            position: absolute;
+            bottom: 100%;
+            right: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: var(--space-1);
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 50;
+            width: 180px;
+        }
+
+        .share-card.active {
+            display: flex;
+        }
+
+        .share-option {
+            background: none;
+            border: none;
+            padding: 6px 8px;
+            font-size: var(--font-meta);
+            text-align: left;
+            cursor: pointer;
+            border-radius: 4px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .share-option:hover {
+            background: var(--input-bg);
+        }
+
+        /* COMMENTS SECTION */
+        .comments-section {
+            margin-top: var(--space-1);
+            padding-top: var(--space-1);
+            border-top: 1px dashed var(--border);
+            display: none;
+            flex-direction: column;
+            gap: var(--space-1);
+            width: 100%;
+        }
+
+        .comments-section.active {
+            display: flex;
+        }
+
+        .comment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 150px;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        .comment-item {
+            font-size: var(--font-meta);
+            background: var(--input-bg);
+            padding: 6px 10px;
+            border-radius: 6px;
+            width: 100%;
+            word-break: break-word;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: var(--secondary);
+            margin-right: 4px;
+        }
+
+        .comment-form {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+            width: 100%;
+        }
+
+        .comment-input {
+            flex: 1;
+            padding: 6px 10px;
+            font-size: var(--font-meta);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            outline: none;
+            background: var(--input-bg);
+            min-width: 0;
+        }
+
+        .comment-submit {
+            background: var(--secondary);
+            color: #FFF;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: var(--font-meta);
+            cursor: pointer;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        /* SECTION BOX */
+        .section-box {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: var(--space-2);
+            margin-bottom: var(--space-2);
+            width: 100%;
+        }
+
+        .section-title {
+            font-size: var(--font-title);
+            font-weight: 700;
+            margin-bottom: var(--space-2);
+            color: var(--secondary);
+        }
+
+        /* RIGHT SIDEBAR */
+        .right-sidebar {
+            display: none;
+        }
+
+        @media (min-width: 992px) {
+            .right-sidebar {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-3);
+                padding-top: var(--space-2);
+                height: 100vh;
+                border-left: 1px solid var(--border);
+                padding-left: var(--space-2);
+                overflow-y: auto;
+            }
+            .right-sidebar::-webkit-scrollbar {
+                width: 4px;
+            }
+            .right-sidebar::-webkit-scrollbar-thumb {
+                background: var(--border);
+                border-radius: 4px;
+            }
+        }
+
+        .widget-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+            width: 100%;
+        }
+
+        .widget-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: var(--space-1) 0;
+            border-bottom: 1px solid var(--border);
+            width: 100%;
+        }
+
+        .widget-item:last-child {
+            border-bottom: none;
+        }
+
+        .widget-item-title {
+            font-size: var(--font-body);
+            font-weight: 600;
+            color: var(--text-main);
+            text-decoration: none;
+            line-height: 1.3;
+            overflow-wrap: break-word;
+        }
+
+        .widget-item-title:hover {
+            color: var(--secondary);
+        }
+
+        .widget-item-meta {
+            font-size: var(--font-meta);
+            color: var(--text-light);
+        }
+
+        /* LOADING INDICATOR FOR PAGINATION */
+        #loadingMore {
+            text-align: center;
+            padding: var(--space-2);
+            color: var(--text-light);
+            font-size: var(--font-meta);
+            display: none;
+            width: 100%;
+        }
+
+        /* TOAST NOTIFICATION */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--secondary);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: var(--font-meta);
+            font-weight: 600;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        #toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- FULL-SCREEN CIRCULAR PROGRESS LOADER -->
+    <div id="page-loader">
+        <div class="circular-progress"></div>
+        <div class="loader-text">Loading MENYA...</div>
+    </div>
+
+    <!-- AUTHENTICATION GATEWAY -->
+    <div id="auth-gateway" style="display: none;">
+        <div class="auth-card">
+            <div class="auth-logo-box">M</div>
+            <div>
+                <div class="auth-title">Welcome to MENYA</div>
+                <div class="auth-subtitle" id="authSubtitle">Please sign in to access your account profile & feed.</div>
+            </div>
+            <form class="auth-form" id="authForm">
+                <div class="auth-field" id="nameFieldContainer" style="display: none;">
+                    <label class="auth-label" for="authName">Full Name</label>
+                    <input type="text" id="authName" class="auth-input" placeholder="Jean Doe">
+                </div>
+                <div class="auth-field">
+                    <label class="auth-label" for="authEmail">Email Address</label>
+                    <input type="email" id="authEmail" class="auth-input" placeholder="name@example.com" required>
+                </div>
+                <div class="auth-field">
+                    <label class="auth-label" for="authPassword">Password</label>
+                    <input type="password" id="authPassword" class="auth-input" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="auth-submit-btn" id="authSubmitBtn">Sign In</button>
+            </form>
+            <div class="auth-switch-text" id="authSwitchText">
+                Don't have an account? <span class="auth-switch-link" id="authSwitchBtn">Register now</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-layout" id="appLayout">
+
+        <!-- LEFT SIDEBAR: DESKTOP NAVIGATION -->
+        <aside class="left-sidebar">
+            <a href="home.html" class="brand-logo" style="margin-bottom: var(--space-2);">
+                <div class="logo-box">M</div>
+                <span class="logo-text">MENYA</span>
+            </a>
+
+            <ul class="nav-list">
+                <li><a href="home.html" class="nav-link active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>Home</a></li>
+                <li><a href="explore.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>Explore</a></li>
+                <li><a href="notification.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>Notifications</a></li>
+                <li><a href="create.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Create</a></li>
+            </ul>
+        </aside>
+
+        <!-- CENTER MAIN CONTENT -->
+        <main class="main-content">
+
+            <!-- HEADER -->
+            <header>
+                <div class="header-left">
+                    <button class="icon-btn" id="navBtn" aria-label="Toggle Menu">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    
+                    <a href="home.html" class="brand-logo">
+                        <div class="logo-box">M</div>
+                        <span class="logo-text">MENYA</span>
+                    </a>
+
+                    <!-- MOBILE DROPDOWN MENU -->
+                    <div class="dropdown-menu" id="navDropdown">
+                        <a class="dropdown-item" href="home.html">Home</a>
+                        <a class="dropdown-item" href="explore.html">Explore</a>
+                        <a class="dropdown-item" href="notification.html">Notifications</a>
+                        <a class="dropdown-item" href="create.html">Create</a>
+                        <a class="dropdown-item" href="stats.html">Stats</a>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <div class="notif-wrapper">
+                        <a href="notification.html" class="icon-btn" aria-label="Notifications" style="text-decoration:none; color:inherit;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        </a>
+                        <span class="badge" id="notifBadge" style="display: none;">0</span>
+                    </div>
+
+                    <button class="avatar-btn" id="avatarBtn">JD</button>
+
+                    <!-- PROFILE DROPDOWN -->
+                    <div class="dropdown-menu" id="avatarDropdown">
+                        <div class="user-profile-summary">
+                            <div class="profile-name" id="profileNameDisplay">Jean Doe</div>
+                            <div class="profile-stats" id="profileStatsDisplay">MSR Rank #1 • Active Member</div>
+                        </div>
+                        <a class="dropdown-item" href="profile.html">Profile</a>
+                        <a class="dropdown-item" href="stats.html">Stats</a>
+                        <a class="dropdown-item" href="#" id="logoutBtn" style="color: #EF4444;">Logout</a>
+                    </div>
+                </div>
+            </header>
+
+            <!-- SEARCH BAR -->
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search posts, topics, or people...">
+                </div>
+            </div>
+
+            <!-- FEED SECTION -->
+            <div class="feed" id="feedContainer">
+                <div class="skeleton-card">
+                    <div class="skeleton-header">
+                        <div class="skeleton-avatar"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line long"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-media"></div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton-header">
+                        <div class="skeleton-avatar"></div>
+                        <div class="skeleton-lines">
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line long"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-media"></div>
+                </div>
+            </div>
+            <div id="loadingMore">No more posts to load.</div>
+        </main>
+
+        <!-- RIGHT SIDEBAR -->
+        <aside class="right-sidebar">
+            <div class="section-box">
+                <div class="section-title">Popular Posts</div>
+                <ul class="widget-list" id="popularWidgetList">
+                    <li class="widget-item"><span class="widget-item-meta">Loading trends...</span></li>
+                </ul>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast">done</div>
+
+    <!-- APPLICATION LOGIC -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCNIsjSl60AlGmtmtC4H3uy5bQ_WCG2HV0",
+            authDomain: "poats-dd25a.firebaseapp.com",
+            projectId: "poats-dd25a",
+            storageBucket: "poats-dd25a.firebasestorage.app",
+            messagingSenderId: "804924221918",
+            appId: "1:804924221918:web:2aeed317da8773e3fbd54f"
+        };
+        
+        let db, auth;
+        let allGlobalPosts = [];
+        let displayedPostsCount = 0;
+        const PAGE_SIZE = 10;
+        let isFetchingMore = false;
+        let hasMorePosts = true;
+        let isRegisterMode = false;
+        let currentUserProfile = null;
+        let allUsersRankMap = {};
+
+        function showToast(message = "done") {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        function hidePageLoader() {
+            const loader = document.getElementById('page-loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 300);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const navBtn = document.getElementById('navBtn');
+            const navDropdown = document.getElementById('navDropdown');
+            const avatarBtn = document.getElementById('avatarBtn');
+            const avatarDropdown = document.getElementById('avatarDropdown');
+            const searchInput = document.getElementById('searchInput');
+            const authForm = document.getElementById('authForm');
+            const authSwitchBtn = document.getElementById('authSwitchBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const mainContentArea = document.querySelector('.main-content');
+
+            if (navBtn) {
+                navBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if(avatarDropdown) avatarDropdown.classList.remove('active');
+                    if(navDropdown) navDropdown.classList.toggle('active');
+                });
+            }
+
+            if (avatarBtn) {
+                avatarBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if(navDropdown) navDropdown.classList.remove('active');
+                    if(avatarDropdown) avatarDropdown.classList.toggle('active');
+                });
+            }
+
+            document.addEventListener('click', () => {
+                if(navDropdown) navDropdown.classList.remove('active');
+                if(avatarDropdown) avatarDropdown.classList.remove('active');
+            });
+
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+                    filterAndRenderFeed(query);
+                });
+            }
+
+            const handleScrollEvent = (target) => {
+                const scrollHeight = target.scrollHeight || document.documentElement.scrollHeight;
+                const scrollTop = target.scrollTop || window.scrollY;
+                const clientHeight = target.clientHeight || window.innerHeight;
+
+                if ((scrollTop + clientHeight) >= scrollHeight - 300) {
+                    loadMorePosts();
+                }
+            };
+
+            window.addEventListener('scroll', () => handleScrollEvent(window));
+            if (mainContentArea) {
+                mainContentArea.addEventListener('scroll', () => handleScrollEvent(mainContentArea));
+            }
+
+            if (authSwitchBtn) {
+                authSwitchBtn.addEventListener('click', () => {
+                    isRegisterMode = !isRegisterMode;
+                    const nameContainer = document.getElementById('nameFieldContainer');
+                    const authTitle = document.querySelector('.auth-title');
+                    const authSubtitle = document.getElementById('authSubtitle');
+                    const authSubmitBtn = document.getElementById('authSubmitBtn');
+                    const authSwitchText = document.getElementById('authSwitchText');
+
+                    if (isRegisterMode) {
+                        nameContainer.style.display = 'flex';
+                        document.getElementById('authName').required = true;
+                        authTitle.textContent = 'Create an Account';
+                        authSubtitle.textContent = 'Register to unlock your MENYA profile & feed.';
+                        authSubmitBtn.textContent = 'Sign Up';
+                        authSwitchText.innerHTML = 'Already have an account? <span class="auth-switch-link" id="authSwitchBtn">Sign in</span>';
+                    } else {
+                        nameContainer.style.display = 'none';
+                        document.getElementById('authName').required = false;
+                        authTitle.textContent = 'Welcome to MENYA';
+                        authSubtitle.textContent = 'Please sign in to access your account profile & feed.';
+                        authSubmitBtn.textContent = 'Sign In';
+                        authSwitchText.innerHTML = 'Don\'t have an account? <span class="auth-switch-link" id="authSwitchBtn">Register now</span>';
+                    }
+                    document.getElementById('authSwitchBtn').addEventListener('click', authSwitchBtn.onclick || (() => authSwitchBtn.click()));
+                });
+            }
+
+            if (authForm) {
+                authForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('authEmail').value.trim();
+                    const password = document.getElementById('authPassword').value.trim();
+                    const name = document.getElementById('authName').value.trim();
+
+                    try {
+                        showToast(isRegisterMode ? "Creating account..." : "Signing in...");
+                        if (isRegisterMode) {
+                            const cred = await auth.createUserWithEmailAndPassword(email, password);
+                            const user = cred.user;
+                            const profileData = {
+                                uid: user.uid,
+                                name: name || email.split('@')[0],
+                                email: email,
+                                avatarUrl: '',
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            };
+                            await db.collection('users').doc(user.uid).set(profileData);
+                            currentUserProfile = profileData;
+                        } else {
+                            const cred = await auth.signInWithEmailAndPassword(email, password);
+                            const userDoc = await db.collection('users').doc(cred.user.uid).get();
+                            if (userDoc.exists) {
+                                currentUserProfile = userDoc.data();
+                            } else {
+                                currentUserProfile = {
+                                    uid: cred.user.uid,
+                                    name: cred.user.displayName || email.split('@')[0],
+                                    email: email,
+                                    avatarUrl: ''
+                                };
+                            }
+                        }
+                        await computeAllUsersMSR();
+                        updateProfileUI();
+                        document.getElementById('auth-gateway').style.display = 'none';
+                        document.getElementById('appLayout').style.display = 'grid';
+                        hidePageLoader();
+                        showToast("Successfully logged in!");
+                    } catch (err) {
+                        showToast(err.message || "Authentication failed.");
+                    }
+                });
+            }
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    await auth.signOut();
+                    currentUserProfile = null;
+                    document.getElementById('appLayout').style.display = 'none';
+                    document.getElementById('auth-gateway').style.display = 'flex';
+                    showToast("Logged out successfully");
+                });
+            }
+
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                db = firebase.firestore();
+                auth = firebase.auth();
+
+                auth.onAuthStateChanged(async (user) => {
+                    hidePageLoader();
+                    if (user) {
+                        try {
+                            const userDoc = await db.collection('users').doc(user.uid).get();
+                            if (userDoc.exists) {
+                                currentUserProfile = userDoc.data();
+                            } else {
+                                currentUserProfile = {
+                                    uid: user.uid,
+                                    name: user.displayName || user.email.split('@')[0],
+                                    email: user.email,
+                                    avatarUrl: ''
+                                };
+                            }
+                        } catch (e) {
+                            currentUserProfile = {
+                                uid: user.uid,
+                                name: user.email.split('@')[0],
+                                email: user.email,
+                                avatarUrl: ''
+                            };
+                        }
+                        await computeAllUsersMSR();
+                        updateProfileUI();
+                        initNotificationListener(user.uid);
+                        document.getElementById('auth-gateway').style.display = 'none';
+                        document.getElementById('appLayout').style.display = 'grid';
+                        initFastFeedLoad();
+                    } else {
+                        document.getElementById('auth-gateway').style.display = 'flex';
+                        document.getElementById('appLayout').style.display = 'none';
+                    }
+                });
+            } catch (err) {
+                console.error("Firebase initialization failed:", err);
+                hidePageLoader();
+                document.getElementById('page-loader').innerHTML = '<p style="padding: 24px; color: var(--text-light); text-align: center;">Unable to connect to database.</p>';
+            }
+        });
+
+        function initNotificationListener(uid) {
+            if (!db) return;
+            db.collection('notifications')
+                .where('userId', '==', uid)
+                .where('read', '==', false)
+                .onSnapshot((snapshot) => {
+                    const count = snapshot.size;
+                    const badge = document.getElementById('notifBadge');
+                    if (!badge) return;
+                    if (count === 0) {
+                        badge.style.display = 'none';
+                    } else {
+                        badge.style.display = 'block';
+                        badge.textContent = count > 9 ? '9+' : count;
+                    }
+                }, (err) => {
+                    console.error("Error fetching notifications:", err);
+                });
+        }
+
+        async function computeAllUsersMSR() {
+            try {
+                const usersSnap = await db.collection('users').get();
+                const postsSnap = await db.collection('posts').get();
+
+                let participationCounts = {};
+                usersSnap.forEach(doc => {
+                    const data = doc.data();
+                    const uid = doc.id;
+                    const name = data.name || data.displayName || data.email?.split('@')[0] || "User";
+                    participationCounts[uid] = {
+                        uid: uid,
+                        name: name,
+                        email: data.email || '',
+                        avatarUrl: data.avatarUrl || data.photoURL || '',
+                        count: 0
+                    };
+                });
+
+                postsSnap.forEach(doc => {
+                    const post = doc.data();
+                    const authorId = post.authorId || post.uid || post.userId;
+                    const authorName = post.authorName || post.username;
+
+                    if (authorId && participationCounts[authorId]) {
+                        participationCounts[authorId].count++;
+                    } else if (authorName) {
+                        let found = Object.values(participationCounts).find(u => u.name.toLowerCase() === authorName.toLowerCase());
+                        if (found) {
+                            found.count++;
+                        }
+                    }
+                });
+
+                let sortedUsers = Object.values(participationCounts).sort((a, b) => b.count - a.count);
+
+                allUsersRankMap = {};
+                sortedUsers.forEach((userObj, index) => {
+                    const rankNum = index + 1;
+                    allUsersRankMap[userObj.uid] = {
+                        rank: rankNum,
+                        msrString: `MSR ${rankNum}`,
+                        name: userObj.name,
+                        avatarUrl: userObj.avatarUrl
+                    };
+                    allUsersRankMap[userObj.name.toLowerCase()] = {
+                        rank: rankNum,
+                        msrString: `MSR ${rankNum}`,
+                        name: userObj.name,
+                        avatarUrl: userObj.avatarUrl
+                    };
+                });
+            } catch (err) {
+                console.error("Error computing MSR rankings:", err);
+            }
+        }
+
+        function updateProfileUI() {
+            if (!currentUserProfile) return;
+            const uid = currentUserProfile.uid;
+            const name = currentUserProfile.name || currentUserProfile.displayName || "User";
+            const avatarUrl = currentUserProfile.avatarUrl || currentUserProfile.photoURL || "";
+            
+            let userRankData = allUsersRankMap[uid] || allUsersRankMap[name.toLowerCase()] || { msrString: "MSR 1", rank: 1 };
+            
+            document.getElementById('profileNameDisplay').textContent = name;
+            document.getElementById('profileStatsDisplay').textContent = `${userRankData.msrString} • Active Member`;
+            
+            const avatarBtn = document.getElementById('avatarBtn');
+            if (avatarUrl) {
+                avatarBtn.innerHTML = `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(name)}">`;
+            } else {
+                const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                avatarBtn.textContent = initials || 'U';
+            }
+        }
+
+        async function initFastFeedLoad() {
+            const feedContainer = document.getElementById('feedContainer');
+            
+            try {
+                // Fetch ALL posts from the database without any artificial limits
+                const snapshot = await db.collection('posts').orderBy('createdAt', 'desc').get();
+                
+                if (snapshot.empty) {
+                    feedContainer.innerHTML = '<p style="padding: 24px; color: var(--text-light); text-align: center;">No posts available right now.</p>';
+                    return;
+                }
+
+                await computeAllUsersMSR();
+
+                allGlobalPosts = [];
+                snapshot.forEach(doc => {
+                    let postData = { id: doc.id, ...doc.data() };
+                    postData.realCommentsCount = postData.commentsCount || 0;
+                    allGlobalPosts.push(postData);
+                });
+
+                // Facebook Logic: load initial batch, reveal remainder progressively on scroll
+                displayedPostsCount = Math.min(PAGE_SIZE, allGlobalPosts.length);
+                renderFeed(allGlobalPosts.slice(0, displayedPostsCount));
+                renderPopularWidgets(allGlobalPosts);
+
+                if (displayedPostsCount >= allGlobalPosts.length) {
+                    hasMorePosts = false;
+                    document.getElementById('loadingMore').style.display = 'block';
+                }
+            } catch (err) {
+                console.error("Fast load error:", err);
+                feedContainer.innerHTML = '<p style="padding: 16px; color: var(--text-light); text-align: center;">Unable to load feed.</p>';
+            }
+        }
+
+        function loadMorePosts() {
+            if (isFetchingMore || !hasMorePosts) return;
+            
+            if (displayedPostsCount >= allGlobalPosts.length) {
+                hasMorePosts = false;
+                document.getElementById('loadingMore').style.display = 'block';
+                return;
+            }
+
+            isFetchingMore = true;
+            document.getElementById('loadingMore').style.display = 'block';
+
+            setTimeout(() => {
+                const nextCount = Math.min(displayedPostsCount + PAGE_SIZE, allGlobalPosts.length);
+                displayedPostsCount = nextCount;
+                renderFeed(allGlobalPosts.slice(0, displayedPostsCount));
+
+                isFetchingMore = false;
+                if (displayedPostsCount >= allGlobalPosts.length) {
+                    hasMorePosts = false;
+                    document.getElementById('loadingMore').style.display = 'block';
+                } else {
+                    document.getElementById('loadingMore').style.display = 'none';
+                }
+            }, 200);
+        }
+
+        function filterAndRenderFeed(query) {
+            if (!query) {
+                renderFeed(allGlobalPosts.slice(0, displayedPostsCount));
+                return;
+            }
+
+            const filtered = allGlobalPosts.filter(post => {
+                const title = (post.title || post.caption || "").toLowerCase();
+                const content = (post.content || post.body || post.description || "").toLowerCase();
+                const author = (post.authorName || post.username || "").toLowerCase();
+                const authorId = post.authorId || post.uid || "";
+                let userRankData = allUsersRankMap[authorId] || allUsersRankMap[author.toLowerCase()] || {};
+                const msr = (userRankData.msrString || "").toLowerCase();
+
+                return title.includes(query) || content.includes(query) || author.includes(query) || msr.includes(query);
+            });
+
+            renderFeed(filtered);
+        }
+
+        function renderFeed(posts) {
+            const feedContainer = document.getElementById('feedContainer');
+            feedContainer.innerHTML = '';
+
+            if (posts.length === 0) {
+                feedContainer.innerHTML = '<p style="padding: 24px; color: var(--text-light); text-align: center;">No posts found matching your search.</p>';
+                return;
+            }
+
+            posts.forEach(post => {
+                feedContainer.appendChild(createPostCard(post));
+            });
+        }
+
+        function formatTimeAgo(timestamp) {
+            if (!timestamp) return "Just now";
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            const seconds = Math.floor((new Date() - date) / 1000);
+
+            let interval = seconds / 31536000;
+            if (interval > 1) return Math.floor(interval) + "y ago";
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + "mo ago";
+            interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + "d ago";
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + "h ago";
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + "m ago";
+            return "Just now";
+        }
+
+        function createPostCard(post) {
+            const article = document.createElement('article');
+            article.className = 'post-card';
+
+            const title = post.title || post.caption || "";
+            const bodyText = post.content || post.body || post.description || post.caption || "";
+            const author = post.authorName || post.username || "User";
+            const authorId = post.authorId || post.uid || post.userId;
+            
+            let authorInfo = allUsersRankMap[authorId] || allUsersRankMap[author.toLowerCase()] || { msrString: "MSR 1", avatarUrl: "" };
+            const displayName = authorInfo.name || author;
+            const displayAvatarUrl = authorInfo.avatarUrl || "";
+            const msrLevel = authorInfo.msrString || "MSR 1";
+
+            let avatarHtml = '';
+            if (displayAvatarUrl) {
+                avatarHtml = `<img src="${escapeHtml(displayAvatarUrl)}" alt="${escapeHtml(displayName)}">`;
+            } else {
+                const initials = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                avatarHtml = escapeHtml(initials || 'U');
+            }
+
+            const claps = post.claps || 0;
+            const realCommentsCount = post.realCommentsCount || 0;
+            const timeAgo = formatTimeAgo(post.createdAt);
+
+            const isLongText = bodyText.length > 200;
+
+            let mediaHtml = '';
+            const bgCol = post.colorBg || post.color || post.backgroundColor || post.background;
+            
+            if (bgCol) {
+                const bannerText = title || bodyText;
+                mediaHtml = `<div class="post-color-banner" style="background: ${escapeHtml(bgCol)};">${escapeHtml(bannerText)}</div>`;
+            } else if (post.imageUrl || post.image) {
+                mediaHtml = `<div class="post-media-container"><img src="${escapeHtml(post.imageUrl || post.image)}" alt="Post image" loading="lazy"></div>`;
+            } else if ((post.pollOptions && Array.isArray(post.pollOptions) && post.pollOptions.length > 0) || (post.options && Array.isArray(post.options) && post.options.length > 0)) {
+                const rawOpts = post.pollOptions || post.options;
+                let optionsHtml = '';
+                const totalVotes = post.totalPollVotes || rawOpts.reduce((acc, curr) => acc + (typeof curr === 'object' ? (curr.votes || 0) : 0), 0) || 1;
+                
+                rawOpts.forEach((opt, idx) => {
+                    const optVotes = typeof opt === 'object' ? (opt.votes || 0) : 0;
+                    const percentage = Math.round((optVotes / totalVotes) * 100);
+                    const optText = typeof opt === 'object' ? (opt.text || '') : opt;
+                    optionsHtml += `
+                        <div class="poll-option-row" data-poll-index="${idx}">
+                            <div class="poll-progress-fill" style="width: ${percentage}%;"></div>
+                            <span class="poll-option-text">${escapeHtml(optText)}</span>
+                            <span class="poll-option-percentage">${percentage}%</span>
+                        </div>
+                    `;
+                });
+                mediaHtml = `<div class="poll-container">${optionsHtml}</div>`;
+            }
+
+            article.innerHTML = `
+                ${title && !bgCol ? `<div class="post-title">${escapeHtml(title)}</div>` : ''}
+                ${!bgCol && bodyText ? `<div class="post-subtitle ${isLongText ? 'collapsed' : ''}">${escapeHtml(bodyText)}</div>` : ''}
+                ${isLongText && !bgCol ? '<button class="read-more-btn">See more</button>' : ''}
+                ${mediaHtml}
+
+                <div class="post-meta">
+                    <div class="meta-author-wrapper">
+                        <div class="meta-avatar">${avatarHtml}</div>
+                        <span class="meta-author">${escapeHtml(displayName)}</span>
+                        <span class="meta-dot">•</span>
+                        <span>${escapeHtml(timeAgo)}</span>
+                    </div>
+                    <div class="msr-badge">${escapeHtml(msrLevel)}</div>
+                </div>
+
+                <div class="post-interactions">
+                    <div class="action-group">
+                        <button class="action-btn clap-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
+                            <span><span class="clap-count-display">${claps}</span> likes</span>
+                        </button>
+                        <button class="action-btn comment-toggle-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            <span><span class="comment-count-display">${realCommentsCount}</span> comments</span>
+                        </button>
+                    </div>
+                    <div style="position:relative;">
+                        <button class="action-btn share-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                            <span>Share</span>
+                        </button>
+                        <div class="share-card">
+                            <button class="share-option copy-link-btn">📋 Copy link</button>
+                            <button class="share-option whatsapp-btn">🟢 WhatsApp</button>
+                            <button class="share-option telegram-btn">🔵 Telegram</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comments-section">
+                    <div class="comment-list"></div>
+                    <div class="comment-form">
+                        <input type="text" class="comment-input" placeholder="Write a comment...">
+                        <button class="comment-submit">Post</button>
+                    </div>
+                </div>
+            `;
+
+            const pollOptionsElements = article.querySelectorAll('.poll-option-row');
+            pollOptionsElements.forEach(optionEl => {
+                optionEl.addEventListener('click', async () => {
+                    showToast("Vote recorded!");
+                    const optIdx = parseInt(optionEl.getAttribute('data-poll-index'));
+                    let targetList = post.pollOptions || post.options;
+                    
+                    if (targetList && targetList[optIdx]) {
+                        if (typeof targetList[optIdx] === 'object') {
+                            targetList[optIdx].votes = (targetList[optIdx].votes || 0) + 1;
+                        } else {
+                            targetList[optIdx] = { text: targetList[optIdx], votes: 1 };
+                        }
+                        
+                        let total = targetList.reduce((acc, curr) => acc + (typeof curr === 'object' ? (curr.votes || 0) : 0), 0) || 1;
+                        pollOptionsElements.forEach((el, i) => {
+                            let v = typeof targetList[i] === 'object' ? (targetList[i].votes || 0) : 0;
+                            let pct = Math.round((v / total) * 100);
+                            el.querySelector('.poll-progress-fill').style.width = pct + '%';
+                            el.querySelector('.poll-option-percentage').textContent = pct + '%';
+                        });
+
+                        if (post.id && db) {
+                            const updatePayload = post.pollOptions ? { pollOptions: targetList } : { options: targetList };
+                            await db.collection('posts').doc(post.id).update(updatePayload).catch(() => {});
+                        }
+                    }
+                });
+            });
+
+            if (isLongText && !bgCol) {
+                const readMoreBtn = article.querySelector('.read-more-btn');
+                const subtitle = article.querySelector('.post-subtitle');
+                readMoreBtn.addEventListener('click', () => {
+                    subtitle.classList.toggle('collapsed');
+                    readMoreBtn.textContent = subtitle.classList.contains('collapsed') ? 'See more' : 'See less';
+                });
+            }
+
+            const clapBtn = article.querySelector('.clap-btn');
+            const clapCountDisplay = article.querySelector('.clap-count-display');
+            let isLiked = false;
+
+            clapBtn.addEventListener('click', async () => {
+                isLiked = !isLiked;
+                let count = parseInt(clapCountDisplay.textContent);
+                count = isLiked ? count + 1 : count - 1;
+                clapCountDisplay.textContent = count;
+                clapBtn.classList.toggle('liked', isLiked);
+                showToast("done");
+
+                if (post.id && db) {
+                    await db.collection('posts').doc(post.id).update({ claps: count }).catch(() => {});
+                }
+            });
+
+            const shareBtn = article.querySelector('.share-btn');
+            const shareCard = article.querySelector('.share-card');
+            shareBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.querySelectorAll('.share-card').forEach(c => { if(c !== shareCard) c.classList.remove('active'); });
+                shareCard.classList.toggle('active');
+            });
+
+            article.querySelector('.copy-link-btn').addEventListener('click', () => {
+                navigator.clipboard.writeText(window.location.href);
+                showToast("done");
+                shareCard.classList.remove('active');
+            });
+
+            article.querySelector('.whatsapp-btn').addEventListener('click', () => {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(title || bodyText + " - " + window.location.href)}`, '_blank');
+                showToast("done");
+                shareCard.classList.remove('active');
+            });
+
+            article.querySelector('.telegram-btn').addEventListener('click', () => {
+                window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(title || bodyText)}`, '_blank');
+                showToast("done");
+                shareCard.classList.remove('active');
+            });
+
+            const commentToggleBtn = article.querySelector('.comment-toggle-btn');
+            const commentsSection = article.querySelector('.comments-section');
+            commentToggleBtn.addEventListener('click', () => {
+                commentsSection.classList.toggle('active');
+                if (commentsSection.classList.contains('active') && post.id && db) {
+                    loadComments(post.id, commentsSection.querySelector('.comment-list'));
+                }
+            });
+
+            const commentSubmit = article.querySelector('.comment-submit');
+            const commentInput = article.querySelector('.comment-input');
+            const commentCountDisplay = article.querySelector('.comment-count-display');
+
+            commentSubmit.addEventListener('click', async () => {
+                const text = commentInput.value.trim();
+                if (!text) return;
+                
+                const commentList = commentsSection.querySelector('.comment-list');
+                const div = document.createElement('div');
+                div.className = 'comment-item';
+                div.innerHTML = `<span class="comment-author">${escapeHtml(currentUserProfile?.name || 'You')}</span>${escapeHtml(text)}`;
+                commentList.appendChild(div);
+                
+                commentInput.value = '';
+                
+                let currentCount = parseInt(commentCountDisplay.textContent) || 0;
+                currentCount++;
+                commentCountDisplay.textContent = currentCount;
+
+                showToast("done");
+
+                if (post.id && db) {
+                    await db.collection('posts').doc(post.id).collection('comments').add({
+                        author: currentUserProfile?.name || 'User',
+                        text: text,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }).catch(() => {});
+                }
+            });
+
+            return article;
+        }
+
+        async function loadComments(postId, container) {
+            container.innerHTML = '<span style="font-size:12px;color:var(--text-light);text-align:center;padding:8px;">Loading comments...</span>';
+            try {
+                const snap = await db.collection('posts').doc(postId).collection('comments').orderBy('createdAt', 'desc').get();
+                container.innerHTML = '';
+                if (snap.empty) {
+                    container.innerHTML = '<span style="font-size:12px;color:var(--text-light);text-align:center;padding:8px;">No comments yet.</span>';
+                    return;
+                }
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'comment-item';
+                    div.innerHTML = `<span class="comment-author">${escapeHtml(data.author || 'User')}</span>${escapeHtml(data.text || '')}`;
+                    container.appendChild(div);
+                });
+            } catch (err) {
+                container.innerHTML = '<span style="font-size:12px;color:var(--text-light);">Failed to load comments.</span>';
+            }
+        }
+
+        function renderPopularWidgets(posts) {
+            const popularWidgetList = document.getElementById('popularWidgetList');
+            popularWidgetList.innerHTML = '';
+            
+            const popularPosts = [...posts].sort((a, b) => (b.claps || 0) - (a.claps || 0)).slice(0, 3);
+            
+            if (popularPosts.length === 0) {
+                popularWidgetList.innerHTML = '<li class="widget-item"><span class="widget-item-meta">No popular posts yet</span></li>';
+                return;
+            }
+
+            popularPosts.forEach(post => {
+                const li = document.createElement('li');
+                li.className = 'widget-item';
+                li.innerHTML = `
+                    <a href="#" class="widget-item-title">${escapeHtml(post.title || post.caption || "Community Post")}</a>
+                    <span class="widget-item-meta">👍 ${post.claps || 0} likes • ${post.realCommentsCount || 0} comments</span>
+                `;
+                popularWidgetList.appendChild(li);
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/&lt;/, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>

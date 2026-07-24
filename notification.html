@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>MENYA | Notifications & Activity Center</title>
+    <meta name="theme-color" content="#0F4C5C">
+    
+    <!-- Typography: Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+    <style>
+        /* CSS RESET & VARIABLES */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #D4A017;
+            --secondary: #0F4C5C;
+            --bg: #FFFFFF;
+            --card-bg: #FFFFFF;
+            --text-main: #111827;
+            --text-light: #6B7280;
+            --border: #E5E7EB;
+            --input-bg: #F9FAFB;
+            --unread-bg: #F0F9FF;
+            
+            --font-title: 14px;
+            --font-body: 13px;
+            --font-meta: 11px;
+
+            --space-1: 6px;
+            --space-2: 12px;
+            --space-3: 18px;
+            --space-4: 24px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+            color: var(--text-main);
+            line-height: 1.45;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* BASE APP LAYOUT */
+        .app-container {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            min-height: 100vh;
+        }
+
+        .desktop-sidebar {
+            display: none;
+        }
+
+        /* MOBILE HEADER */
+        header {
+            padding: var(--space-2) var(--space-3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            background: var(--bg);
+            z-index: 100;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .logo-box {
+            width: 24px;
+            height: 24px;
+            background: var(--secondary);
+            border-radius: 5px;
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        .logo-text {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--secondary);
+            letter-spacing: 0.3px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-main);
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            transition: background 0.15s ease;
+        }
+
+        .icon-btn:hover, .icon-btn:active {
+            background: var(--input-bg);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .notif-wrapper {
+            position: relative;
+        }
+
+        .badge {
+            position: absolute;
+            top: -3px;
+            right: -4px;
+            background: #EF4444;
+            color: #FFFFFF;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 4px;
+            border-radius: 8px;
+            border: 1.5px solid var(--bg);
+            line-height: 1;
+            display: none;
+        }
+
+        /* AVATAR UI */
+        .avatar-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--secondary);
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 12px;
+            border: 1.5px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        /* DROPDOWN PANELS */
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            width: 180px;
+            display: none;
+            flex-direction: column;
+            padding: var(--space-1) 0;
+            z-index: 200;
+        }
+
+        .dropdown-menu.active {
+            display: flex;
+        }
+
+        #navDropdown { left: 0; }
+        #avatarDropdown { right: 0; width: 200px; }
+
+        .dropdown-item {
+            padding: var(--space-1) var(--space-2);
+            font-size: var(--font-body);
+            color: var(--text-main);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .dropdown-item:hover, .dropdown-item:active {
+            background: var(--input-bg);
+        }
+
+        .user-profile-summary {
+            padding: var(--space-1) var(--space-2);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: var(--space-1);
+        }
+
+        .profile-name {
+            font-size: var(--font-title);
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .profile-stats {
+            font-size: 10px;
+            color: var(--text-light);
+            margin-top: 1px;
+        }
+
+        /* MAIN NOTIFICATIONS CONTAINER */
+        .main-content {
+            flex: 1;
+            padding: var(--space-3);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            width: 100%;
+        }
+
+        /* NOTIFICATIONS HEADER & FILTERS */
+        .page-header {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            padding-bottom: var(--space-2);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .page-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mark-read-btn {
+            background: none;
+            border: none;
+            color: var(--secondary);
+            font-size: var(--font-meta);
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s ease;
+        }
+
+        .mark-read-btn:hover {
+            text-decoration: underline;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+
+        .tab-btn {
+            padding: 5px 12px;
+            font-size: var(--font-meta);
+            font-weight: 600;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--input-bg);
+            color: var(--text-light);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--secondary);
+            color: #FFFFFF;
+            border-color: var(--secondary);
+        }
+
+        /* NOTIFICATIONS LIST */
+        .notif-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .notif-card {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-2);
+            padding: var(--space-2);
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .notif-card.unread {
+            background: var(--unread-bg);
+            border-color: #BAE6FD;
+        }
+
+        .notif-icon-box {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .icon-security { background: #FEE2E2; color: #DC2626; }
+        .icon-action { background: #FEF3C7; color: #D97706; }
+        .icon-msr { background: #E0E7FF; color: #4338CA; }
+        .icon-community { background: #E0F2FE; color: #0284C7; }
+        .icon-post { background: #DCFCE7; color: #15803D; }
+
+        .notif-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .notif-text {
+            font-size: var(--font-body);
+            color: var(--text-main);
+            line-height: 1.4;
+        }
+
+        .notif-text strong {
+            font-weight: 700;
+        }
+
+        .notif-time {
+            font-size: var(--font-meta);
+            color: var(--text-light);
+        }
+
+        .notif-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #0284C7;
+            position: absolute;
+            top: 14px;
+            right: 14px;
+        }
+
+        .notif-card:not(.unread) .notif-dot {
+            display: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+            font-size: var(--font-body);
+        }
+
+        /* DESKTOP VIEW ADJUSTMENTS */
+        @media (min-width: 800px) {
+            body {
+                padding: 24px 0;
+            }
+
+            .app-container {
+                flex-direction: row;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+                border: 1px solid var(--border);
+                min-height: 800px;
+            }
+
+            #navBtn, header {
+                display: none;
+            }
+
+            .desktop-sidebar {
+                display: flex;
+                flex-direction: column;
+                width: 230px;
+                background: #FAFAFA;
+                border-right: 1px solid var(--border);
+                padding: var(--space-3);
+                justify-content: space-between;
+                flex-shrink: 0;
+            }
+
+            .sidebar-top {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-4);
+            }
+
+            .sidebar-nav {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .nav-link {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                font-size: var(--font-body);
+                font-weight: 500;
+                color: var(--text-light);
+                text-decoration: none;
+                border-radius: 6px;
+                transition: all 0.15s ease;
+            }
+
+            .nav-link:hover, .nav-link.active {
+                color: var(--secondary);
+                background: #EAEFEF;
+                font-weight: 600;
+            }
+
+            .main-content {
+                padding: var(--space-4);
+                margin: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- DESKTOP LEFT NAVIGATION SIDEBAR -->
+        <aside class="desktop-sidebar">
+            <div class="sidebar-top">
+                <a href="index.html" class="brand-logo">
+                    <div class="logo-box">M</div>
+                    <span class="logo-text">MENYA</span>
+                </a>
+
+                <nav class="sidebar-nav">
+                    <a href="index.html" class="nav-link">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                        Home
+                    </a>
+                    <a href="explore.html" class="nav-link">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                        Explore
+                    </a>
+                    <a href="create.html" class="nav-link">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Create
+                    </a>
+                    <a href="notification.html" class="nav-link active">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        Notifications
+                    </a>
+                    <a href="profile.html" class="nav-link">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Profile
+                    </a>
+                </nav>
+            </div>
+
+            <div style="border-top: 1px solid var(--border); padding-top: var(--space-2);">
+                <a href="#" class="nav-link" style="color: #EF4444;" id="logoutBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- MOBILE HEADER -->
+        <header>
+            <div class="header-left">
+                <button class="icon-btn" id="navBtn" aria-label="Toggle Menu">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+
+                <a href="index.html" class="brand-logo">
+                    <div class="logo-box">M</div>
+                    <span class="logo-text">MENYA</span>
+                </a>
+
+                <div class="dropdown-menu" id="navDropdown">
+                    <a class="dropdown-item" href="index.html">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                        Home
+                    </a>
+                    <a class="dropdown-item" href="explore.html">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+                        Explore
+                    </a>
+                    <a class="dropdown-item" href="create.html">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Create
+                    </a>
+                    <a class="dropdown-item" href="notification.html">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        Notifications
+                    </a>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="notif-wrapper">
+                    <button class="icon-btn" aria-label="Notifications">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    </button>
+                    <span class="badge" id="headerNotifBadge">0</span>
+                </div>
+
+                <div class="avatar-btn" id="avatarBtn">
+                    M
+                </div>
+
+                <div class="dropdown-menu" id="avatarDropdown">
+                    <div class="user-profile-summary">
+                        <div class="profile-name" id="profileNameDisplay">User Account</div>
+                        <div class="profile-stats" id="profileStatsDisplay">Loading activity...</div>
+                    </div>
+                    <a class="dropdown-item" href="profile.html">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Profile
+                    </a>
+                    <a class="dropdown-item" href="#" style="color: #EF4444;" id="mobileLogoutBtn">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN NOTIFICATION CONTENT -->
+        <main class="main-content">
+
+            <div class="page-header">
+                <div class="page-header-top">
+                    <h1 class="page-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        Activity Feed & Notifications
+                    </h1>
+                    <button class="mark-read-btn" id="markAllReadBtn">Mark all as read</button>
+                </div>
+
+                <div class="filter-tabs">
+                    <button class="tab-btn active" data-filter="all">All</button>
+                    <button class="tab-btn" data-filter="unread">Unread</button>
+                    <button class="tab-btn" data-filter="security">Security & System</button>
+                    <button class="tab-btn" data-filter="interactions">Interactions</button>
+                    <button class="tab-btn" data-filter="posts">Posts & Content</button>
+                    <button class="tab-btn" data-filter="msr">MSR Rankings</button>
+                </div>
+            </div>
+
+            <!-- NOTIFICATIONS FEED -->
+            <div class="notif-list" id="notifList">
+                <div class="empty-state">Loading synchronized account activities...</div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- SCRIPT HANDLERS & CROSS-FEATURE FIREBASE INTEGRATION -->
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCNIsjSl60AlGmtmtC4H3uy5bQ_WCG2HV0",
+            authDomain: "poats-dd25a.firebaseapp.com",
+            projectId: "poats-dd25a",
+            storageBucket: "poats-dd25a.firebasestorage.app",
+            messagingSenderId: "804924221918",
+            appId: "1:804924221918:web:2aeed317da8773e3fbd54f"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Dropdown UI Handlers
+            const navBtn = document.getElementById('navBtn');
+            const navDropdown = document.getElementById('navDropdown');
+            const avatarBtn = document.getElementById('avatarBtn');
+            const avatarDropdown = document.getElementById('avatarDropdown');
+
+            if(navBtn) {
+                navBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if(avatarDropdown) avatarDropdown.classList.remove('active');
+                    navDropdown.classList.toggle('active');
+                });
+            }
+
+            if(avatarBtn) {
+                avatarBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if(navDropdown) navDropdown.classList.remove('active');
+                    avatarDropdown.classList.toggle('active');
+                });
+            }
+
+            document.addEventListener('click', () => {
+                if(navDropdown) navDropdown.classList.remove('active');
+                if(avatarDropdown) avatarDropdown.classList.remove('active');
+            });
+
+            // Logout handling
+            const handleLogout = (e) => {
+                e.preventDefault();
+                auth.signOut().then(() => {
+                    window.location.href = 'index.html';
+                });
+            };
+            document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+            document.getElementById('mobileLogoutBtn')?.addEventListener('click', handleLogout);
+
+            // Filter Tabs Toggle Logic
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            let currentFilter = 'all';
+
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    renderNotifications();
+                });
+            });
+
+            // State Data Store
+            let globalNotifications = [];
+
+            // Cross-Feature Activity Aggregator & Sync
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    const displayName = user.displayName || user.email.split('@')[0];
+                    document.getElementById('profileNameDisplay').textContent = displayName;
+                    document.getElementById('profileStatsDisplay').textContent = `${user.email}`;
+                    if(avatarBtn) avatarBtn.textContent = displayName.substring(0, 2).toUpperCase();
+
+                    // 1. Fetch direct user notifications
+                    const notifRef = db.collection('users').doc(user.uid).collection('notifications');
+                    // 2. Fetch user's created posts to synthesize activity streams across features
+                    const postsRef = db.collection('posts').where('userId', '==', user.uid);
+
+                    // Real-time synchronization for notifications
+                    notifRef.orderBy('timestamp', 'desc').onSnapshot((notifSnapshot) => {
+                        let directNotifs = [];
+                        notifSnapshot.forEach((doc) => {
+                            directNotifs.push({ id: doc.id, source: 'notification', ...doc.data() });
+                        });
+
+                        // Fetch user posts simultaneously to unify feature activities
+                        postsRef.get().then((postsSnapshot) => {
+                            let postActivities = [];
+                            postsSnapshot.forEach((doc) => {
+                                const pData = doc.data();
+                                postActivities.push({
+                                    id: 'post_' + doc.id,
+                                    source: 'posts',
+                                    type: 'posts',
+                                    text: `You successfully published a new <strong>${pData.type}</strong> post: "${pData.title || pData.content || 'Untitled'}".`,
+                                    timestamp: pData.createdAt || { toDate: () => new Date() },
+                                    unread: false
+                                });
+                            });
+
+                            // Merge and sort global activities by timestamp
+                            globalNotifications = [...directNotifs, ...postActivities].sort((a, b) => {
+                                const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(0);
+                                const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(0);
+                                return timeB - timeA;
+                            });
+
+                            renderNotifications();
+                            updateBadgeCount();
+                        }).catch(err => {
+                            console.error("Error syncing cross-feature posts:", err);
+                            globalNotifications = directNotifs;
+                            renderNotifications();
+                            updateBadgeCount();
+                        });
+
+                    }, (error) => {
+                        console.error("Error fetching notifications: ", error);
+                        document.getElementById('notifList').innerHTML = `<div class="empty-state">Unable to load account activities. Please check connection.</div>`;
+                    });
+                } else {
+                    document.getElementById('notifList').innerHTML = `<div class="empty-state">Please sign in to view your synchronized account activities.</div>`;
+                }
+            });
+
+            // Render Engine based on classification filters
+            function renderNotifications() {
+                const notifListContainer = document.getElementById('notifList');
+                
+                const filtered = globalNotifications.filter(item => {
+                    if (currentFilter === 'all') return true;
+                    if (currentFilter === 'unread') return item.unread === true;
+                    return item.type === currentFilter;
+                });
+
+                if (filtered.length === 0) {
+                    notifListContainer.innerHTML = `<div class="empty-state">No activities found in this classification.</div>`;
+                    return;
+                }
+
+                notifListContainer.innerHTML = filtered.map(item => {
+                    let iconClass = 'icon-community';
+                    let svgIcon = '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>';
+
+                    if(item.type === 'security') {
+                        iconClass = 'icon-security';
+                        svgIcon = '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>';
+                    } else if(item.type === 'msr') {
+                        iconClass = 'icon-msr';
+                        svgIcon = '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>';
+                    } else if(item.type === 'action') {
+                        iconClass = 'icon-action';
+                        svgIcon = '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>';
+                    } else if(item.type === 'posts') {
+                        iconClass = 'icon-post';
+                        svgIcon = '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>';
+                    }
+
+                    const timeFormatted = item.timestamp?.toDate ? timeAgo(item.timestamp.toDate()) : 'Recently';
+
+                    return `
+                        <div class="notif-card ${item.unread ? 'unread' : ''}" data-id="${item.id}" data-source="${item.source}">
+                            <div class="notif-icon-box ${iconClass}">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${svgIcon}</svg>
+                            </div>
+                            <div class="notif-body">
+                                <p class="notif-text">${item.text}</p>
+                                <span class="notif-time">${timeFormatted}</span>
+                            </div>
+                            <div class="notif-dot"></div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Attach click listeners to mark items read if they are direct notifications
+                document.querySelectorAll('.notif-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const id = card.dataset.id;
+                        const source = card.dataset.source;
+                        if (source === 'notification') {
+                            markAsRead(id);
+                        }
+                    });
+                });
+            }
+
+            // Update badge counts globally
+            function updateBadgeCount() {
+                const unreadCount = globalNotifications.filter(i => i.unread).length;
+                const badge = document.getElementById('headerNotifBadge');
+                if (badge) {
+                    if (unreadCount > 0) {
+                        badge.style.display = 'inline-block';
+                        badge.textContent = unreadCount;
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            }
+
+            // Mark a single notification as read in Firestore
+            function markAsRead(id) {
+                const user = auth.currentUser;
+                if (!user) return;
+                db.collection('users').doc(user.uid).collection('notifications').doc(id).update({
+                    unread: false
+                }).catch(err => console.error("Error marking read:", err));
+            }
+
+            // Mark all notifications as read
+            const markAllReadBtn = document.getElementById('markAllReadBtn');
+            markAllReadBtn.addEventListener('click', () => {
+                const user = auth.currentUser;
+                if (!user) return;
+                
+                const batch = db.batch();
+                globalNotifications.forEach(item => {
+                    if (item.source === 'notification' && item.unread) {
+                        const ref = db.collection('users').doc(user.uid).collection('notifications').doc(item.id);
+                        batch.update(ref, { unread: false });
+                    }
+                });
+
+                batch.commit().catch(err => console.error("Error bulk updating notifications:", err));
+            });
+
+            // Utility for human-readable time strings
+            function timeAgo(date) {
+                const seconds = Math.floor((new Date() - date) / 1000);
+                let interval = seconds / 31536000;
+                if (interval > 1) return Math.floor(interval) + " years ago";
+                interval = seconds / 2592000;
+                if (interval > 1) return Math.floor(interval) + " months ago";
+                interval = seconds / 86400;
+                if (interval > 1) return Math.floor(interval) + " days ago";
+                interval = seconds / 3600;
+                if (interval > 1) return Math.floor(interval) + " hours ago";
+                interval = seconds / 60;
+                if (interval > 1) return Math.floor(interval) + " minutes ago";
+                return "Just now";
+            }
+        });
+    </script>
+</body>
+</html>

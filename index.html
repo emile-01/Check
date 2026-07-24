@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>MENYA | Authentication</title>
+    <meta name="theme-color" content="#0F4C5C">
+    <!-- Fonts matching Menya -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #D4A017;
+            --secondary: #0F4C5C;
+            --bg: #F3F4F6;
+            --card: #ffffff;
+            --text-main: #1F2937;
+            --text-light: #6B7280;
+            --border: #E5E7EB;
+            --dark-hero: #0D0D0D;
+            --success: #10B981;
+            --error: #EF4444;
+        }
+
+        body.dark-mode {
+            --bg: #111827;
+            --card: #1F2937;
+            --text-main: #F9FAFB;
+            --text-light: #9CA3AF;
+            --border: #374151;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg); 
+            color: var(--text-main);
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        h1, h2, h3 { font-family: 'Nunito', sans-serif; font-weight: 900; }
+
+        /* Main Container - Split layout on Desktop */
+        .auth-wrapper {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: row;
+        }
+
+        /* Desktop Left Panel (Dark Branding) */
+        .desktop-hero {
+            display: none;
+            width: 45%;
+            background: var(--dark-hero);
+            color: #ffffff;
+            padding: 60px 40px;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .desktop-hero::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            right: -50px;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(212, 160, 23, 0.15) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+        }
+
+        .hero-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-box-lg { 
+            width: 48px; 
+            height: 48px; 
+            background: var(--secondary); 
+            border: 2px solid var(--primary);
+            border-radius: 10px; 
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 900; 
+            font-size: 24px;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .hero-content h2 {
+            font-size: 32px;
+            line-height: 1.2;
+            margin-bottom: 16px;
+            color: #ffffff;
+        }
+
+        .hero-content p {
+            font-size: 16px;
+            color: #9CA3AF;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .hero-quote {
+            border-left: 3px solid var(--primary);
+            padding-left: 16px;
+            font-style: italic;
+            color: #E5E7EB;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .hero-footer {
+            font-size: 13px;
+            color: #6B7280;
+        }
+
+        /* Right Form Container */
+        .auth-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+            width: 100%;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 440px;
+            background: var(--card);
+            border-radius: 16px;
+            padding: 32px 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        .mobile-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .logo-box-sm { 
+            width: 34px; 
+            height: 34px; 
+            background: var(--secondary); 
+            border-radius: 8px; 
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: 800; 
+            font-size: 18px;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .auth-header h3 {
+            font-size: 22px;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .auth-header p {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        .auth-header a {
+            color: var(--secondary);
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .auth-header a:hover {
+            text-decoration: underline;
+        }
+
+        /* Forms UI */
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--secondary);
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-light);
+            cursor: pointer;
+        }
+
+        /* Checkbox UI */
+        .remember-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-light);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-label input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--secondary);
+        }
+
+        /* Password Checklist */
+        .checklist {
+            margin: 12px 0 18px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .checklist-item {
+            font-size: 13px;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s;
+        }
+
+        .checklist-item .icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 1px solid var(--text-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+
+        .checklist-item.valid {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .checklist-item.valid .icon {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        /* Action Buttons */
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            border: none;
+            background: var(--secondary);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-submit:hover {
+            opacity: 0.92;
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+
+        .error-text {
+            color: var(--error);
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        /* Responsive Breakpoints */
+        @media (min-width: 992px) {
+            .desktop-hero {
+                display: flex;
+            }
+            .mobile-brand {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-wrapper">
+    <!-- Desktop Left Screen -->
+    <div class="desktop-hero">
+        <div class="hero-brand">
+            <div class="logo-box-lg">M</div>
+            <h1 style="font-size: 26px; letter-spacing: 1px; color: #ffffff;">MENYA</h1>
+        </div>
+
+        <div class="hero-content">
+            <h2>Learn, Know & Progress</h2>
+            <p>Welcome to MENYA, your home ground for history, life skills, and curated knowledge.</p>
+            
+            <div class="hero-quote">
+                "This moment is a story to share to a millions people come and interact with us on menya."
+            </div>
+        </div>
+
+        <div class="hero-footer">
+            &copy; 2026 MENYA Platform. All rights reserved.
+        </div>
+    </div>
+
+    <!-- Right Screen (Auth Forms) -->
+    <div class="auth-container">
+        <div class="auth-card">
+            
+            <!-- Mobile Brand Header -->
+            <div class="mobile-brand">
+                <div class="logo-box-sm">M</div>
+                <h1 style="font-size: 22px; color: var(--secondary);">MENYA</h1>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <div id="loginSection" class="auth-form active">
+                <div class="auth-header">
+                    <h3>Log in to MENYA</h3>
+                    <p>Don't have an account? <a onclick="toggleAuthMode('signup')">Create one</a></p>
+                </div>
+
+                <form onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input type="email" id="loginEmail" class="form-control" placeholder="janedoe@email.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginPass">Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="loginPass" class="form-control" placeholder="••••••••" required>
+                            <button type="button" class="toggle-password" onclick="togglePassVisibility('loginPass', this)">Show</button>
+                        </div>
+                    </div>
+
+                    <div class="remember-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="rememberMe" checked>
+                            <span>Remember me</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Log In</button>
+                </form>
+            </div>
+
+            <!-- CREATE ACCOUNT FORM -->
+            <div id="signupSection" class="auth-form">
+                <div class="auth-header">
+                    <h3>Create your account</h3>
+                    <p>Already have an account? <a onclick="toggleAuthMode('login')">Log in now</a></p>
+                </div>
+
+                <form onsubmit="handleSignup(event)">
+                    <div class="form-group">
+                        <label for="displayName">Display Name</label>
+                        <input type="text" id="displayName" class="form-control" placeholder="John Doe" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signupEmail">Email Address</label>
+                        <input type="email" id="signupEmail" class="form-control" placeholder="janedoe@email.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signupPass">Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="signupPass" class="form-control" placeholder="••••••••" oninput="validateSignup()" required>
+                            <button type="button" class="toggle-password" onclick="togglePassVisibility('signupPass', this)">Show</button>
+                        </div>
+                    </div>
+
+                    <!-- Password checklist -->
+                    <div class="checklist">
+                        <div id="checkLength" class="checklist-item">
+                            <span class="icon">✓</span>
+                            <span>Must contain at least 6 characters</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPass">Confirm password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="confirmPass" class="form-control" placeholder="••••••••" oninput="validateSignup()" required>
+                            <button type="button" class="toggle-password" onclick="togglePassVisibility('confirmPass', this)">Show</button>
+                        </div>
+                        <div id="matchError" class="error-text">Passwords do not match</div>
+                    </div>
+
+                    <button type="submit" id="signupSubmitBtn" class="btn-submit" style="background: var(--primary);" disabled>Create account</button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyCNIsjSl60AlGmtmtC4H3uy5bQ_WCG2HV0",
+        authDomain: "poats-dd25a.firebaseapp.com",
+        projectId: "poats-dd25a",
+        storageBucket: "poats-dd25a.firebasestorage.app",
+        messagingSenderId: "804924221918",
+        appId: "1:804924221918:web:2aeed317da8773e3fbd54f"
+    };
+
+    // Initialize Firebase safely
+    const app = !firebase.apps.length ? firebase.initializeApp(firebaseConfig) : firebase.app();
+    const db = app.firestore();
+    const auth = app.auth();
+
+    // Dark mode check from local storage
+    if (localStorage.getItem('menya_dark') === 'true') {
+        document.body.classList.add('dark-mode');
+    }
+
+    // Toggle forms
+    function toggleAuthMode(mode) {
+        document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+        if (mode === 'login') {
+            document.getElementById('loginSection').classList.add('active');
+        } else {
+            document.getElementById('signupSection').classList.add('active');
+        }
+    }
+
+    // Password Visibility Toggle
+    function togglePassVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+            input.type = 'text';
+            btn.innerText = 'Hide';
+        } else {
+            input.type = 'password';
+            btn.innerText = 'Show';
+        }
+    }
+
+    // Password Validation
+    function validateSignup() {
+        const pass = document.getElementById('signupPass').value;
+        const confirmPass = document.getElementById('confirmPass').value;
+        const checkLength = document.getElementById('checkLength');
+        const matchError = document.getElementById('matchError');
+        const submitBtn = document.getElementById('signupSubmitBtn');
+
+        const isLengthValid = pass.length >= 6;
+        const isMatch = pass === confirmPass && confirmPass.length > 0;
+
+        if (isLengthValid) {
+            checkLength.classList.add('valid');
+        } else {
+            checkLength.classList.remove('valid');
+        }
+
+        if (confirmPass.length > 0 && !isMatch) {
+            matchError.style.display = 'block';
+        } else {
+            matchError.style.display = 'none';
+        }
+
+        if (isLengthValid && isMatch) {
+            submitBtn.disabled = false;
+        } else {
+            submitBtn.disabled = true;
+        }
+    }
+
+    // Login Handler
+    async function handleLogin(e) {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const pass = document.getElementById('loginPass').value;
+        const remember = document.getElementById('rememberMe').checked;
+
+        try {
+            const persistence = remember 
+                ? firebase.auth.Auth.Persistence.LOCAL 
+                : firebase.auth.Auth.Persistence.SESSION;
+                
+            await auth.setPersistence(persistence);
+            await auth.signInWithEmailAndPassword(email, pass);
+            window.location.href = 'home.html';
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+
+    // Signup Handler
+    async function handleSignup(e) {
+        e.preventDefault();
+        const name = document.getElementById('displayName').value;
+        const email = document.getElementById('signupEmail').value;
+        const pass = document.getElementById('signupPass').value;
+
+        try {
+            const cred = await auth.createUserWithEmailAndPassword(email, pass);
+            
+            // Store user in Firestore
+            await db.collection("users").doc(cred.user.uid).set({
+                displayName: name,
+                email: email,
+                readCount: 0,
+                commentCount: 0,
+                createdAt: new Date()
+            });
+
+            await cred.user.updateProfile({ displayName: name });
+            window.location.href = 'home.html';
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>MENYA | Analytics & Stats</title>
+    <meta name="theme-color" content="#0F4C5C">
+    
+    <!-- Typography: Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Firebase Compatibility SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        /* CSS RESET & VARIABLES */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #D4A017;
+            --secondary: #0F4C5C;
+            --bg: #FFFFFF;
+            --card-bg: #FFFFFF;
+            --text-main: #111827;
+            --text-light: #6B7280;
+            --border: #E5E7EB;
+            --input-bg: #F9FAFB;
+            
+            --font-title: 14px;
+            --font-body: 13px;
+            --font-meta: 11px;
+
+            --space-1: 6px;
+            --space-2: 12px;
+            --space-3: 18px;
+            --space-4: 24px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+            color: var(--text-main);
+            line-height: 1.45;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            min-height: 100vh;
+        }
+
+        .desktop-sidebar {
+            display: none;
+        }
+
+        header {
+            padding: var(--space-2) var(--space-3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            background: var(--bg);
+            z-index: 100;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .logo-box {
+            width: 24px;
+            height: 24px;
+            background: var(--secondary);
+            border-radius: 5px;
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        .logo-text {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--secondary);
+            letter-spacing: 0.3px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-main);
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            transition: background 0.15s ease;
+        }
+
+        .icon-btn:hover, .icon-btn:active {
+            background: var(--input-bg);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .notif-wrapper {
+            position: relative;
+        }
+
+        .badge {
+            position: absolute;
+            top: -3px;
+            right: -4px;
+            background: #EF4444;
+            color: #FFFFFF;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 4px;
+            border-radius: 8px;
+            border: 1.5px solid var(--bg);
+            line-height: 1;
+        }
+
+        .avatar-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--secondary);
+            color: #FFFFFF;
+            font-weight: 700;
+            font-size: 12px;
+            border: 1px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .avatar-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            width: 180px;
+            display: none;
+            flex-direction: column;
+            padding: var(--space-1) 0;
+            z-index: 200;
+        }
+
+        .dropdown-menu.active {
+            display: flex;
+        }
+
+        #navDropdown { left: 0; }
+        #avatarDropdown { right: 0; width: 200px; }
+
+        .dropdown-item {
+            padding: var(--space-1) var(--space-2);
+            font-size: var(--font-body);
+            color: var(--text-main);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .dropdown-item:hover, .dropdown-item:active {
+            background: var(--input-bg);
+        }
+
+        .user-profile-summary {
+            padding: var(--space-1) var(--space-2);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: var(--space-1);
+        }
+
+        .profile-name {
+            font-size: var(--font-title);
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: var(--space-3);
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            width: 100%;
+        }
+
+        .section-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: var(--space-3);
+            background: var(--card-bg);
+            width: 100%;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--secondary);
+            margin-bottom: var(--space-2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--space-3);
+        }
+
+        @media (min-width: 768px) {
+            .analytics-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 220px;
+        }
+
+        .empty-state-msg {
+            display: none;
+            width: 100%;
+            height: 220px;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-body);
+            color: var(--text-light);
+            text-align: center;
+            background: var(--input-bg);
+            border-radius: 6px;
+        }
+
+        .projection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--space-2);
+            margin-top: var(--space-2);
+        }
+
+        .projection-card {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: var(--space-2);
+        }
+
+        .projection-label {
+            font-size: var(--font-meta);
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .projection-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--secondary);
+            margin-top: 2px;
+        }
+
+        .projection-trend {
+            font-size: 10px;
+            font-weight: 700;
+            color: #10B981;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            margin-top: 2px;
+        }
+
+        @media (min-width: 800px) {
+            body {
+                padding: 24px 0;
+            }
+
+            .app-container {
+                flex-direction: row;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+                border: 1px solid var(--border);
+                min-height: 800px;
+            }
+
+            #navBtn, header {
+                display: none;
+            }
+
+            .desktop-sidebar {
+                display: flex;
+                flex-direction: column;
+                width: 230px;
+                background: #FAFAFA;
+                border-right: 1px solid var(--border);
+                padding: var(--space-3);
+                justify-content: space-between;
+                flex-shrink: 0;
+            }
+
+            .sidebar-top {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-4);
+            }
+
+            .sidebar-nav {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .nav-link {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                font-size: var(--font-body);
+                font-weight: 500;
+                color: var(--text-light);
+                text-decoration: none;
+                border-radius: 6px;
+                transition: all 0.15s ease;
+            }
+
+            .nav-link:hover, .nav-link.active {
+                color: var(--secondary);
+                background: #EAEFEF;
+                font-weight: 600;
+            }
+
+            .main-content {
+                padding: var(--space-4);
+                margin: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- DESKTOP NAVIGATION SIDEBAR -->
+        <aside class="desktop-sidebar">
+            <div class="sidebar-top">
+                <a href="home.html" class="brand-logo">
+                    <div class="logo-box">M</div>
+                    <span class="logo-text">MENYA</span>
+                </a>
+
+                <nav class="sidebar-nav">
+                    <a href="home.html" class="nav-link">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                        Home
+                    </a>
+                    <a href="stats.html" class="nav-link active">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        Analytics
+                    </a>
+                    <a href="profile.html" class="nav-link">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Profile
+                    </a>
+                </nav>
+            </div>
+
+            <div style="border-top: 1px solid var(--border); padding-top: var(--space-2);">
+                <a href="#" id="desktopLogoutBtn" class="nav-link" style="color: #EF4444;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- MOBILE HEADER -->
+        <header>
+            <div class="header-left">
+                <button class="icon-btn" id="navBtn" aria-label="Toggle Menu">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+
+                <a href="home.html" class="brand-logo">
+                    <div class="logo-box">M</div>
+                    <span class="logo-text">MENYA</span>
+                </a>
+
+                <div class="dropdown-menu" id="navDropdown">
+                    <a class="dropdown-item" href="home.html">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                        Home
+                    </a>
+                    <a class="dropdown-item" href="stats.html">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                        Analytics
+                    </a>
+                    <a class="dropdown-item" href="profile.html">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Profile
+                    </a>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="notif-wrapper">
+                    <button class="icon-btn" aria-label="Notifications">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    </button>
+                    <span class="badge">9+</span>
+                </div>
+
+                <div class="avatar-btn" id="avatarBtn">
+                    <span id="avatarInitials">JD</span>
+                    <img id="avatarNavImage" src="" alt="Avatar" style="display: none;">
+                </div>
+
+                <div class="dropdown-menu" id="avatarDropdown">
+                    <div class="user-profile-summary">
+                        <div class="profile-name" id="dropdownProfileName">Loading...</div>
+                    </div>
+                    <a class="dropdown-item" href="profile.html">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Profile
+                    </a>
+                    <a class="dropdown-item" id="mobileLogoutBtn" href="#" style="color: #EF4444;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+
+            <div class="analytics-grid">
+                
+                <!-- USER ENGAGEMENT GRAPH (Professional Line Graph) -->
+                <section class="section-card">
+                    <h2 class="section-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                        User Engagement Rate (%)
+                    </h2>
+                    <div class="chart-container" id="containerEngagement">
+                        <canvas id="engagementChart"></canvas>
+                    </div>
+                    <div class="empty-state-msg" id="emptyEngagement">No activity recorded yet.</div>
+                </section>
+
+                <!-- USER CLAPS & LIKES LINE GRAPH -->
+                <section class="section-card">
+                    <h2 class="section-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        User Claps & Likes Trend
+                    </h2>
+                    <div class="chart-container" id="containerReadingTime">
+                        <canvas id="readingTimeChart"></canvas>
+                    </div>
+                    <div class="empty-state-msg" id="emptyReadingTime">No claps or post activity found.</div>
+                </section>
+
+            </div>
+
+            <div class="analytics-grid">
+
+                <!-- MSR RANKING PROGRESS LINE GRAPH -->
+                <section class="section-card">
+                    <h2 class="section-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        MSR Ranking Progress
+                    </h2>
+                    <div class="chart-container" id="containerMsr">
+                        <canvas id="msrRankChart"></canvas>
+                    </div>
+                    <div class="empty-state-msg" id="emptyMsr">No ranking data points available.</div>
+                </section>
+
+                <!-- LIVE METRICS & SUMMARY -->
+                <section class="section-card">
+                    <h2 class="section-title">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                        Live Activity Summary
+                    </h2>
+                    
+                    <div class="projection-grid">
+                        <div class="projection-card">
+                            <div class="projection-label">Time Scale</div>
+                            <div class="projection-value" id="projTimeScale">--</div>
+                            <div class="projection-trend" id="trendTimeScale">Adaptive scale</div>
+                        </div>
+
+                        <div class="projection-card">
+                            <div class="projection-label">Total Post Claps</div>
+                            <div class="projection-value" id="projReadingTime">0</div>
+                            <div class="projection-trend">Live interactions</div>
+                        </div>
+
+                        <div class="projection-card">
+                            <div class="projection-label">MSR Rank Score</div>
+                            <div class="projection-value" id="projMsrRank">0</div>
+                            <div class="projection-trend">Activity-weighted rank</div>
+                        </div>
+
+                        <div class="projection-card">
+                            <div class="projection-label">Total User Posts</div>
+                            <div class="projection-value" id="projViews">0</div>
+                            <div class="projection-trend">Published content</div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- FIREBASE & CHARTS INITIALIZATION SCRIPT -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCNIsjSl60AlGmtmtC4H3uy5bQ_WCG2HV0",
+            authDomain: "poats-dd25a.firebaseapp.com",
+            projectId: "poats-dd25a",
+            storageBucket: "poats-dd25a.firebasestorage.app",
+            messagingSenderId: "804924221918",
+            appId: "1:804924221918:web:2aeed317da8773e3fbd54f"
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const secondaryColor = '#0F4C5C';
+            const primaryColor = '#D4A017';
+
+            let engagementChart, readingTimeChart, msrRankChart;
+
+            function initEmptyCharts() {
+                // Professional Line Graph for Engagement
+                engagementChart = new Chart(document.getElementById('engagementChart'), {
+                    type: 'line',
+                    data: { labels: [], datasets: [{ label: 'Engagement %', data: [], borderColor: secondaryColor, backgroundColor: 'rgba(15, 76, 92, 0.08)', fill: true, tension: 0.35, borderWidth: 2, pointRadius: 3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                });
+
+                // Professional Line Graph for Claps & Likes
+                readingTimeChart = new Chart(document.getElementById('readingTimeChart'), {
+                    type: 'line',
+                    data: { labels: [], datasets: [{ label: 'Claps', data: [], borderColor: primaryColor, backgroundColor: 'rgba(212, 160, 23, 0.08)', fill: true, tension: 0.35, borderWidth: 2, pointRadius: 3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                });
+
+                // Professional Line Graph for MSR Ranking Progress
+                msrRankChart = new Chart(document.getElementById('msrRankChart'), {
+                    type: 'line',
+                    data: { labels: [], datasets: [{ label: 'MSR Ranking', data: [], borderColor: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.08)', fill: true, tension: 0.35, borderWidth: 2, pointRadius: 3 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                });
+            }
+
+            initEmptyCharts();
+
+            // UI Dropdown Navigation Logic
+            const navBtn = document.getElementById('navBtn');
+            const navDropdown = document.getElementById('navDropdown');
+            const avatarBtn = document.getElementById('avatarBtn');
+            const avatarDropdown = document.getElementById('avatarDropdown');
+
+            if (navBtn && navDropdown) {
+                navBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (avatarDropdown) avatarDropdown.classList.remove('active');
+                    navDropdown.classList.toggle('active');
+                });
+            }
+
+            if (avatarBtn && avatarDropdown) {
+                avatarBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (navDropdown) navDropdown.classList.remove('active');
+                    avatarDropdown.classList.toggle('active');
+                });
+            }
+
+            document.addEventListener('click', () => {
+                if (navDropdown) navDropdown.classList.remove('active');
+                if (avatarDropdown) avatarDropdown.classList.remove('active');
+            });
+
+            // Auth State Listener
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    loadTrueUserStats(user);
+                } else {
+                    window.location.href = "home.html";
+                }
+            });
+
+            async function loadTrueUserStats(user) {
+                try {
+                    const userDocRef = db.collection('users').doc(user.uid);
+                    const userDoc = await userDocRef.get();
+                    let userData = userDoc.exists ? userDoc.data() : {};
+
+                    let userEmail = user.email || '';
+                    let name = userData.name || userData.fullName || user.displayName || userData.userName || (userEmail ? userEmail.split('@')[0] : 'User');
+                    
+                    const profileNameEl = document.getElementById('dropdownProfileName');
+                    if (profileNameEl) profileNameEl.textContent = name;
+
+                    let photoURL = userData.avatarUrl || userData.photoURL || user.photoURL;
+                    const avatarNavImage = document.getElementById('avatarNavImage');
+                    const avatarInitials = document.getElementById('avatarInitials');
+
+                    if (photoURL && avatarNavImage && avatarInitials) {
+                        avatarNavImage.src = photoURL;
+                        avatarNavImage.style.display = 'block';
+                        avatarInitials.style.display = 'none';
+                    } else if (avatarInitials) {
+                        let initials = name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
+                        avatarInitials.textContent = initials;
+                    }
+
+                    // Fetch actual posts from Firestore
+                    const postsSnap = await db.collection('posts').get();
+                    let userPosts = [];
+                    postsSnap.forEach(doc => {
+                        let data = doc.data();
+                        let authorKey = data.userName || data.authorName || data.author || "";
+                        if (data.userId === user.uid || data.uid === user.uid || (name && authorKey.toLowerCase() === name.toLowerCase())) {
+                            userPosts.push({ id: doc.id, ...data });
+                        }
+                    });
+
+                    let totalClaps = 0;
+                    let totalComments = 0;
+                    let timestamps = [];
+
+                    userPosts.forEach(p => {
+                        totalClaps += (p.claps || p.likes || 0);
+                        totalComments += (p.commentsCount || p.comments || 0);
+                        if (p.createdAt) {
+                            let parsedDate = p.createdAt.toDate ? p.createdAt.toDate() : new Date(p.createdAt);
+                            if (!isNaN(parsedDate)) timestamps.push(parsedDate);
+                        }
+                    });
+
+                    let postCount = userPosts.length;
+
+                    // Determine accurate time scale (seconds, minutes, hours, days, years)
+                    let now = new Date();
+                    let referenceTime = timestamps.length > 0 ? new Date(Math.min(...timestamps)) : (user.metadata.creationTime ? new Date(user.metadata.creationTime) : now);
+                    let diffMs = now - referenceTime;
+                    let diffSecs = Math.max(1, Math.floor(diffMs / 1000));
+                    let diffMins = Math.floor(diffSecs / 60);
+                    let diffHours = Math.floor(diffMins / 60);
+                    let diffDays = Math.floor(diffHours / 24);
+                    let diffYears = Math.floor(diffDays / 365);
+
+                    let timeScaleLabel = "";
+                    let labels = [];
+
+                    if (diffSecs < 60) {
+                        timeScaleLabel = `${diffSecs} Seconds`;
+                        labels = ['Start', 'Now'];
+                    } else if (diffMins < 60) {
+                        timeScaleLabel = `${diffMins} Minutes`;
+                        labels = ['Start', 'Mid', 'Now'];
+                    } else if (diffDays < 1) {
+                        timeScaleLabel = `${diffHours} Hours`;
+                        labels = ['Start', 'Mid', 'Now'];
+                    } else if (diffYears < 1) {
+                        timeScaleLabel = `${diffDays} Days`;
+                        labels = ['Day 1', 'Recent', 'Today'];
+                    } else {
+                        timeScaleLabel = `${diffYears} Years`;
+                        labels = ['Year 1', 'Recent', 'Current'];
+                    }
+
+                    document.getElementById('projTimeScale').textContent = timeScaleLabel;
+
+                    // Hide charts if completely empty
+                    if (postCount === 0 && totalClaps === 0 && totalComments === 0) {
+                        document.getElementById('containerEngagement').style.display = 'none';
+                        document.getElementById('emptyEngagement').style.display = 'flex';
+
+                        document.getElementById('containerReadingTime').style.display = 'none';
+                        document.getElementById('emptyReadingTime').style.display = 'flex';
+
+                        document.getElementById('containerMsr').style.display = 'none';
+                        document.getElementById('emptyMsr').style.display = 'flex';
+                        return;
+                    }
+
+                    let calculatedMsrRank = (totalClaps * 1) + (totalComments * 3) + (postCount * 5);
+                    let engagementRateValue = Math.min(100, Math.floor(15 + (totalClaps * 2) + (totalComments * 4)));
+
+                    // Update metrics summary cards
+                    document.getElementById('projReadingTime').textContent = totalClaps;
+                    document.getElementById('projMsrRank').textContent = calculatedMsrRank;
+                    document.getElementById('projViews').textContent = postCount;
+
+                    // Populate line graphs dynamically
+                    let multiLabels = labels.length === 2 ? [labels[0], labels[1]] : [labels[0], labels[1], labels[2]];
+                    let stepValEng = Math.floor(engagementRateValue / multiLabels.length);
+                    let stepValClaps = Math.floor(totalClaps / multiLabels.length);
+                    let stepValMsr = Math.floor(calculatedMsrRank / multiLabels.length);
+
+                    let engData = multiLabels.map((_, i) => i === multiLabels.length - 1 ? engagementRateValue : Math.max(5, stepValEng * (i + 1)));
+                    let clapsData = multiLabels.map((_, i) => i === multiLabels.length - 1 ? totalClaps : stepValClaps * (i + 1));
+                    let msrData = multiLabels.map((_, i) => i === multiLabels.length - 1 ? calculatedMsrRank : Math.max(1, stepValMsr * (i + 1)));
+
+                    engagementChart.data.labels = multiLabels;
+                    engagementChart.data.datasets[0].data = engData;
+                    engagementChart.update();
+
+                    readingTimeChart.data.labels = multiLabels;
+                    readingTimeChart.data.datasets[0].data = clapsData;
+                    readingTimeChart.update();
+
+                    msrRankChart.data.labels = multiLabels;
+                    msrRankChart.data.datasets[0].data = msrData;
+                    msrRankChart.update();
+
+                } catch (err) {
+                    console.error("Error loading user analytics:", err);
+                }
+            }
+
+            // Logout Action Handlers
+            const logoutHandler = (e) => {
+                e.preventDefault();
+                auth.signOut().then(() => {
+                    window.location.href = "home.html";
+                });
+            };
+
+            const mobileLogout = document.getElementById('mobileLogoutBtn');
+            const desktopLogout = document.getElementById('desktopLogoutBtn');
+
+            if (mobileLogout) mobileLogout.addEventListener('click', logoutHandler);
+            if (desktopLogout) desktopLogout.addEventListener('click', logoutHandler);
+        });
+    </script>
+</body>
+</html>
